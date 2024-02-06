@@ -15,10 +15,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = __importDefault(require("express"));
 const index_js_1 = require("../middleware/index.js");
 const todo_js_1 = __importDefault(require("../db/models/todo.js"));
+const zod_1 = require("zod");
+const inputProps = zod_1.z.object({
+    title: zod_1.z.string().min(1),
+    description: zod_1.z.string().min(1)
+});
 const router = express_1.default.Router();
 router.post('/todos', index_js_1.authenticateJwt, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     try {
-        const { title, description } = req.body;
+        const pardedInput = inputProps.safeParse(req.body);
+        if (!pardedInput.success)
+            return res.status(411).json({ msg: pardedInput.error });
+        const { title, description } = pardedInput.data;
         const done = false;
         const userId = req.headers["userId"];
         const newTodo = yield new todo_js_1.default({ title, description, done, userId });
@@ -28,8 +36,8 @@ router.post('/todos', index_js_1.authenticateJwt, (req, res) => __awaiter(void 0
         else
             res.status(500).json({ msg: "something went wrong" });
     }
-    catch (error) {
-        console.log(error);
+    catch (e) {
+        console.log(e);
         res.status(500).json({ msg: "internal server error" });
     }
 }));
@@ -57,7 +65,7 @@ router.patch('/todos/:todoId/done', index_js_1.authenticateJwt, (req, res) => __
         if (data)
             res.status(200).json(data);
         else
-            res.status(401).json({ msg: "something went wrong" });
+            res.status(500).json({ msg: "something went wrong" });
     }
     catch (e) {
         console.log(e);
